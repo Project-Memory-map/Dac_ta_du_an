@@ -1,0 +1,45 @@
+%% Hình 7: Luồng xử lý tạo ký ức kèm ảnh - SRS 1.0
+sequenceDiagram
+  autonumber
+  actor U as Người dùng
+  participant FE as Trình duyệt<br/>(shell.js, memories.js)
+  participant API as FastAPI<br/>(module memories)
+  participant AUTH as get_current_user
+  participant NOM as Nominatim
+  participant DB as MySQL
+  participant FS as uploads/
+
+  U->>FE: Gõ "Hồ Gươm", nhấn Enter / "Tìm"
+  FE->>API: GET /api/geocode?q=Hồ Gươm
+  alt Chưa có trong cache (24 giờ)
+    API->>API: Chờ lượt (1 yêu cầu/giây toàn hệ thống, tối đa 5 giây)
+    API->>NOM: /search (format=jsonv2, limit=5, accept-language=vi, User-Agent riêng)
+    NOM-->>API: Kết quả
+  end
+  API-->>FE: ≤ 5 địa điểm {name, display_name, latitude, longitude}
+  U->>FE: Chọn kết quả, điền tiêu đề, ngày, câu chuyện, hashtag, chọn ảnh, bấm "Lưu ký ức"
+  FE->>FE: Kiểm trước: tiêu đề, ngày không ở tương lai, ≤ 10 hashtag, ≤ 10 ảnh
+  FE->>API: POST /api/memories (multipart, Bearer JWT)
+  API->>AUTH: Giải mã JWT, so token_version, tài khoản active
+  AUTH-->>API: Người dùng hợp lệ
+  API->>API: Kiểm tọa độ, tên địa điểm, tiêu đề ≤ 200, ngày (BR-05)<br/>Gán tỉnh/thành theo tọa độ (BR-25)
+  API->>DB: INSERT memories (visibility = private, BR-01)<br/>trigger trg_memories_bi kiểm lại ngày
+  DB-->>API: id ký ức mới
+  API-->>FE: 201 "Đã lưu ký ức" + dữ liệu ký ức
+  FE->>API: PUT /api/memories/{id}/hashtags {hashtags, ai_hashtags}<br/>POST /api/trips/{trip_id}/memories (chuyến đi đã chọn)
+  API->>DB: Chuẩn hóa và lưu hashtag (BR-06), liên kết chuyến đi (BR-09)
+  API-->>FE: 200
+  opt Có ảnh
+    FE->>API: POST /api/memories/{id}/images (multipart: images[])
+    API->>API: Kiểm chủ ký ức, đuôi + MIME + chữ ký tệp, ≤ 5 MB, tổng ≤ 10 ảnh<br/>Xóa EXIF/GPS (BR-22)
+    API->>FS: Ghi images/{uuid}.{đuôi}
+    API->>DB: INSERT media (trigger trg_media_bi kiểm lại)
+    API-->>FE: 200 danh sách ảnh (URL có chữ ký, hạn 1 giờ)
+  end
+  opt Có video
+    FE->>API: POST /api/memories/{id}/video (.mp4/.mov ≤ 50 MB)
+    API->>FS: Ghi videos/...
+    API->>DB: INSERT media (video)
+    API-->>FE: 200 thông tin video (URL /stream có chữ ký)
+  end
+  FE->>FE: Bỏ ghim tím, tải lại ghim xanh, mở chi tiết ký ức (GET /api/memories/{id})

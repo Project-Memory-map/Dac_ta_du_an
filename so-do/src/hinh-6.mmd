@@ -1,0 +1,20 @@
+%% Hình 6: ERD Module Quản trị - SRS 1.0 (khớp schema.sql bản cuối)
+erDiagram
+  USERS ||--o{ ADMIN_ACTIONS : "thực hiện (admin_id)"
+
+  USERS {
+    bigint id PK
+    enum role "user, admin"
+    enum status "active, locked"
+    int token_version "tăng khi bị khóa"
+  }
+
+  ADMIN_ACTIONS {
+    bigint id PK
+    bigint admin_id FK "RESTRICT; phải có role = admin (trigger)"
+    enum action "hide_memory, unhide_memory, delete_memory, lock_user, unlock_user"
+    enum target_type "memory, user; khớp action (trigger)"
+    bigint target_id "không FK, trỏ tới memories hoặc users"
+    varchar reason "≤500; bắt buộc với hide/delete/lock (app + trigger)"
+    datetime created_at "nhật ký không sửa, không xóa được (trigger)"
+  }

@@ -1,0 +1,27 @@
+%% Hình 3: Sơ đồ phụ thuộc module (Core, M1-M4) - SRS 1.0
+flowchart BT
+  CORE["Core (app/core)<br/>config · database · security (JWT, HMAC media)<br/>passwords (bcrypt) · response · errors"]
+
+  M1["M1 Tài khoản (accounts)<br/>đăng ký, đăng nhập, Google/Facebook,<br/>quên/đổi mật khẩu, hồ sơ<br/><i>deps.get_current_user · avatar_url</i>"]
+  M2["M2 Ký ức, chuyến đi (memories)<br/>ký ức, ảnh/video, hashtag + gợi ý Gemini,<br/>chuyến đi, geocode (Nominatim), ký ức của tôi"]
+  M3["M3 Khám phá (explore)<br/>ghim và danh sách công khai,<br/>lọc hashtag/tỉnh-thành, tìm kiếm<br/><i>region_lookup (ranh giới GeoJSON)</i>"]
+  M4["M4 Quản trị (admin)<br/>ẩn/xóa ký ức, khóa tài khoản,<br/>nhật ký thao tác, thống kê"]
+
+  M1 --> CORE
+  M2 --> CORE
+  M3 --> CORE
+  M4 --> CORE
+
+  M2 -->|"get_current_user, avatar_url"| M1
+  M3 -->|"avatar_url"| M1
+  M4 -->|"get_current_admin (dựa trên get_current_user)"| M1
+  M2 -->|"region_id_for (gán tỉnh/thành)"| M3
+  M1 -.->|"dịch vụ ảnh cho avatar, đếm ký ức/chuyến đi"| M2
+  M3 -.->|"đọc memories, hashtags (chỉ đọc)"| M2
+  M4 -.->|"cập nhật memories.status, deleted_at"| M2
+  M4 -.->|"cập nhật users.status, token_version"| M1
+
+  classDef core fill:#fde2e2,stroke:#9b1c1c,stroke-width:2px,color:#111
+  classDef mod fill:#dbe8ff,stroke:#1e40af,stroke-width:1.5px,color:#111
+  class CORE core
+  class M1,M2,M3,M4 mod

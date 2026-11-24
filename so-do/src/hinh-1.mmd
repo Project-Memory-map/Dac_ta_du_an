@@ -1,0 +1,75 @@
+---
+config:
+  layout: elk
+---
+%% Hình 1: Sơ đồ use case tổng quát (GĐ1) - SRS 1.0
+%% Dàn trang ELK. Tác nhân nối vào nhóm use case; liên kết ẩn (~~~) xếp các gói theo thứ tự EP1 → EP4.
+flowchart TB
+  K(["Khách<br/>(chưa đăng nhập)"])
+  N(["Người dùng"])
+  Q(["Quản trị viên"])
+
+  subgraph SYS["«subsystem» Hệ thống Bản đồ Ký ức (GĐ1)"]
+    subgraph EP1["«package» EP1 · Tài khoản & hồ sơ"]
+      subgraph EP1A["Ai cũng dùng được"]
+        U11(["Đăng ký bằng email"])
+        U12(["Đăng nhập email/mật khẩu"])
+        U13(["Đăng nhập Google"])
+        U14(["Đăng nhập Facebook"])
+        U15(["Quên / đặt lại mật khẩu"])
+      end
+      subgraph EP1B["Cần đăng nhập"]
+        U16(["Đổi / tạo mật khẩu"])
+        U17(["Cập nhật hồ sơ,<br/>xem thống kê"])
+        U18(["Đăng xuất"])
+      end
+    end
+    subgraph EP2["«package» EP2 · Ký ức, chuyến đi, bản đồ (cần đăng nhập)"]
+      U21(["Tạo ký ức<br/>(tìm địa điểm / chọn trên bản đồ)"])
+      U22(["Đính kèm ảnh / video"])
+      U23(["Xem / sửa / xóa ký ức"])
+      U24(["Đổi riêng tư ↔ công khai"])
+      U25(["Gắn hashtag<br/>(gợi ý bằng AI Gemini)"])
+      U26(["Quản lý chuyến đi,<br/>xem lộ trình"])
+    end
+    subgraph EP3["«package» EP3 · Khám phá & tìm kiếm"]
+      subgraph EP3A["Ai cũng dùng được"]
+        U31(["Xem bản đồ ký ức công khai"])
+        U32(["Lọc theo hashtag / tỉnh-thành"])
+        U33(["Tìm kiếm theo từ khóa"])
+      end
+      subgraph EP3B["Cần đăng nhập"]
+        U34(["Lọc ký ức cá nhân<br/>theo thời gian"])
+      end
+    end
+    subgraph EP4["«package» EP4 · Quản trị nội dung (vai trò admin)"]
+      U41(["Ẩn / bỏ ẩn ký ức vi phạm"])
+      U42(["Xóa ký ức vi phạm"])
+      U43(["Khóa / mở khóa tài khoản"])
+      U44(["Xem nhật ký thao tác,<br/>thống kê"])
+    end
+  end
+
+  EP1 ~~~ EP2
+  EP2 ~~~ EP3
+  EP3 ~~~ EP4
+
+  K --- EP1A
+  K --- EP3A
+  N --- EP1B
+  N --- EP2
+  N --- EP3B
+  Q --- EP4
+
+  N -. "kế thừa" .-> K
+  Q -. "kế thừa" .-> N
+
+  classDef actor fill:#fff2cc,stroke:#8a3b00,stroke-width:2px,color:#111
+  classDef uc fill:#e0f0fb,stroke:#0b4f7c,stroke-width:1.5px,color:#111
+  classDef pkg fill:#f7f9fb,stroke:#5b6b7f,color:#111
+  classDef grp fill:#ffffff,stroke:#9aa5b1,stroke-dasharray:4 3,color:#333
+  class K,N,Q actor
+  class U11,U12,U13,U14,U15,U16,U17,U18,U21,U22,U23,U24,U25,U26,U31,U32,U33,U34,U41,U42,U43,U44 uc
+  class EP1,EP2,EP3,EP4 pkg
+  class EP1A,EP1B,EP3A,EP3B grp
+  style SYS fill:#ffffff,stroke:#1b2433,stroke-width:3px

@@ -1,0 +1,40 @@
+%% Hình 4: ERD Module Tài khoản - SRS 1.0 (khớp schema.sql bản cuối)
+erDiagram
+  USERS ||--o{ OAUTH_ACCOUNTS : "có thể liên kết"
+  USERS ||--o{ PASSWORD_RESET_TOKENS : "yêu cầu đặt lại"
+
+  USERS {
+    bigint id PK
+    varchar email UK "NULL nếu Facebook không trả email; lưu chữ thường"
+    varchar password_hash "bcrypt; NULL nếu chỉ đăng nhập mạng xã hội"
+    varchar display_name "tối đa 100 ký tự"
+    varchar avatar_path "đường dẫn nội bộ, không trả ra API"
+    varchar bio "tối đa 500 ký tự"
+    enum role "user (mặc định), admin"
+    enum status "active (mặc định), locked"
+    datetime email_verified_at "dự phòng xác thực email"
+    int token_version "BR-20: thu hồi JWT cũ"
+    tinyint failed_login_count "BR-15"
+    datetime first_failed_at "BR-15"
+    datetime login_locked_until "BR-15"
+    datetime last_login_at
+    datetime created_at
+    datetime updated_at
+  }
+
+  OAUTH_ACCOUNTS {
+    bigint id PK
+    bigint user_id FK "UNIQUE (user_id, provider)"
+    enum provider "google, facebook"
+    varchar provider_user_id "UNIQUE (provider, provider_user_id)"
+    datetime created_at
+  }
+
+  PASSWORD_RESET_TOKENS {
+    bigint id PK
+    bigint user_id FK
+    char token_hash UK "SHA-256 của token"
+    datetime expires_at "tạo + 30 phút"
+    datetime used_at "khác NULL = đã dùng / vô hiệu"
+    datetime created_at "giới hạn 1 liên kết / 60 giây"
+  }

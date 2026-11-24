@@ -1,0 +1,42 @@
+%% Hình 2: Sơ đồ kiến trúc tổng thể (3 lớp) - SRS 1.0
+flowchart TB
+  subgraph P["Lớp trình bày · Trình duyệt (máy tính, điện thoại)"]
+    FE["HTML + CSS + JavaScript thuần<br/>Leaflet (bản đồ)<br/>api.js · ui.js · map.js · shell.js<br/>JWT lưu ở localStorage"]
+  end
+
+  subgraph A["Lớp ứng dụng · FastAPI (Python ≥ 3.11) + Uvicorn"]
+    direction TB
+    MOD["4 module nghiệp vụ<br/>M1 accounts · M2 memories · M3 explore · M4 admin<br/>router + services · Pydantic · get_current_user (JWT + token_version)"]
+    CORE["Lõi app/core<br/>config (.env) · database (SQLAlchemy 2) · security (JWT HS256, ký URL HMAC)<br/>passwords (bcrypt) · response · errors · header bảo mật"]
+    MOD --> CORE
+  end
+
+  subgraph D["Lớp dữ liệu"]
+    DB[("MySQL 8.0 · InnoDB · utf8mb4_0900_ai_ci<br/>11 bảng · 11 trigger · 1 view<br/>FULLTEXT ngram")]
+    FS[("Thư mục uploads/<br/>images · videos · avatars<br/>không phục vụ tĩnh")]
+  end
+
+  OSM["Máy chủ ô bản đồ<br/>OpenStreetMap"]
+  GG["Google OAuth 2.0<br/>(OpenID Connect)"]
+  FB["Facebook Graph API<br/>(OAuth)"]
+  NOM["Nominatim<br/>/search · /reverse<br/>1 yêu cầu/giây, cache"]
+  GEM["Google Gemini<br/>(gợi ý hashtag)"]
+  SMTP["SMTP<br/>Gmail / Mailtrap"]
+
+  FE <-->|"REST API (JSON, multipart)<br/>+ trang HTML/CSS/JS"| A
+  FE -.->|"tải ô bản đồ"| OSM
+  A -->|"SQL qua SQLAlchemy"| DB
+  A -->|"đọc/ghi tệp (đường dẫn an toàn)"| FS
+  A -.->|"OAuth 2.0"| GG
+  A -.->|"OAuth 2.0"| FB
+  A -.->|"geocode (httpx)"| NOM
+  A -.->|"generateContent"| GEM
+  A -.->|"email đặt lại mật khẩu"| SMTP
+
+  classDef ext fill:#fff7c2,stroke:#8a3b00,stroke-width:1.5px,color:#111
+  classDef box fill:#ffffff,stroke:#2d3748,stroke-width:1.5px,color:#111
+  class OSM,GG,FB,NOM,GEM,SMTP ext
+  class FE,MOD,CORE box
+  style P fill:#ffffde,stroke:#aaaa33
+  style A fill:#ffffde,stroke:#aaaa33
+  style D fill:#ffffde,stroke:#aaaa33

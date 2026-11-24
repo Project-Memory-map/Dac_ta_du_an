@@ -1,0 +1,28 @@
+%% Hình 9: Luồng xử lý xem ghim công khai trong vùng nhìn bản đồ - SRS 1.0
+sequenceDiagram
+  autonumber
+  actor U as Khách / Người dùng
+  participant FE as Trình duyệt<br/>(map.js, explore.js, memories.js)
+  participant EX as FastAPI<br/>(module explore)
+  participant ME as FastAPI<br/>(module memories)
+  participant DB as MySQL
+
+  U->>FE: Kéo / thu phóng bản đồ
+  FE->>FE: Ngừng 250 ms → lấy khung (south, west, north, east)<br/>+ bộ lọc (q, hashtags, region)
+  FE->>EX: GET /api/explore/pins?south&west&north&east&q&hashtags&region
+  EX->>EX: Kiểm từ khóa 2–100 ký tự, chuẩn hóa hashtag
+  EX->>DB: SELECT ... WHERE visibility='public' AND status='active'<br/>AND deleted_at IS NULL AND users.status='active' (BR-03)<br/>AND trong khung AND hashtag IN (...) (OR) AND region<br/>[AND MATCH(title, place_name) nếu có q] LIMIT 500
+  DB-->>EX: Các dòng ký ức công khai
+  EX-->>FE: 200 [{id, title, place_name, memory_date, latitude, longitude, author_name}]
+  FE->>FE: Vẽ ghim đỏ, popup dựng bằng DOM (BR-21)
+  opt Danh sách bật "Chỉ trong vùng bản đồ đang xem"
+    FE->>EX: GET /api/explore/memories?...&page=1&page_size=12
+    EX->>DB: Cùng điều kiện + đếm tổng, phân trang
+    EX-->>FE: {items, total, pages} hoặc "Chưa có ký ức công khai trong khu vực này"
+  end
+  opt Đã đăng nhập
+    FE->>ME: GET /api/memories/mine/pins (Bearer JWT)
+    ME->>DB: Ký ức của tôi chưa xóa (≤ 1000)
+    ME-->>FE: Ghim của tôi
+    FE->>FE: Vẽ ghim xanh (công khai) / xanh đậm (riêng tư) / xám (bị ẩn)
+  end

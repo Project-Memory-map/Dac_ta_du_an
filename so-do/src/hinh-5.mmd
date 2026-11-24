@@ -1,0 +1,73 @@
+%% Hình 5: ERD Module Ký ức, Chuyến đi, Bản đồ - SRS 1.0 (khớp schema.sql bản cuối)
+erDiagram
+  USERS ||--o{ MEMORIES : "sở hữu"
+  USERS ||--o{ TRIPS : "sở hữu"
+  REGIONS |o--o{ MEMORIES : "thuộc tỉnh/thành (có thể NULL)"
+  MEMORIES ||--o{ MEDIA : "có"
+  MEMORIES ||--o{ MEMORY_HASHTAGS : "gắn"
+  HASHTAGS ||--o{ MEMORY_HASHTAGS : "được gắn vào"
+  MEMORIES ||--o{ TRIP_MEMORIES : "thuộc về"
+  TRIPS ||--o{ TRIP_MEMORIES : "chứa"
+
+  REGIONS {
+    bigint id PK
+    varchar name "34 tỉnh/thành (2025)"
+    varchar slug UK "khớp provinces.geojson"
+    enum level "province, city, other"
+  }
+
+  MEMORIES {
+    bigint id PK
+    bigint user_id FK "không đổi được (trigger)"
+    bigint region_id FK "tự gán theo tọa độ; NULL nếu ngoài VN"
+    varchar title "tối đa 200 ký tự"
+    mediumtext content
+    date memory_date "không ở tương lai (trigger)"
+    varchar place_name "tối đa 255 ký tự"
+    decimal latitude "-90..90"
+    decimal longitude "-180..180"
+    enum visibility "private (mặc định), public"
+    enum status "active, hidden (admin ẩn)"
+    datetime deleted_at "xóa mềm"
+    datetime created_at
+    datetime updated_at
+  }
+
+  MEDIA {
+    bigint id PK
+    bigint memory_id FK
+    enum media_type "image (≤10, ≤5 MB), video (≤1, ≤50 MB)"
+    varchar file_path "trong uploads/"
+    varchar thumb_path "dự phòng ảnh thu nhỏ"
+    varchar mime_type
+    int size_bytes
+    smallint sort_order "thứ tự ảnh"
+    datetime created_at
+  }
+
+  HASHTAGS {
+    bigint id PK
+    varchar name UK "≤30 ký tự; không phân biệt hoa thường, phân biệt dấu"
+    datetime created_at
+  }
+
+  MEMORY_HASHTAGS {
+    bigint memory_id PK, FK
+    bigint hashtag_id PK, FK
+    enum source "manual, ai (Gemini)"
+  }
+
+  TRIPS {
+    bigint id PK
+    bigint user_id FK
+    varchar name "tối đa 150 ký tự"
+    varchar description "tối đa 500 ký tự"
+    datetime created_at
+    datetime updated_at
+  }
+
+  TRIP_MEMORIES {
+    bigint trip_id PK, FK
+    bigint memory_id PK, FK "cùng chủ với chuyến đi (trigger)"
+    datetime added_at
+  }

@@ -1,0 +1,46 @@
+%% Hình 8: Luồng xử lý đăng nhập bằng Google - SRS 1.0
+sequenceDiagram
+  autonumber
+  actor U as Người dùng
+  participant FE as login.html<br/>(accounts.js)
+  participant API as FastAPI<br/>(google_router)
+  participant G as Google
+  participant DB as MySQL
+  participant CB as oauth-callback.html
+
+  U->>FE: Bấm "Đăng nhập bằng Google"
+  FE->>API: GET /api/auth/google/login
+  API->>API: Sinh state ngẫu nhiên, đặt cookie google_oauth_state<br/>(HttpOnly, SameSite=Lax, 10 phút)
+  API-->>U: 302 tới Google (scope openid email profile)
+  U->>G: Màn hình chọn tài khoản, xin quyền
+  alt Người dùng đồng ý
+    G-->>API: GET /api/auth/google/callback?code&state
+    API->>API: So khớp state với cookie
+    API->>G: Đổi code lấy token, đọc userinfo
+    G-->>API: id Google, tên, email, email_verified
+    API->>DB: Tìm oauth_accounts (google, id Google)
+    alt Đã có liên kết
+      DB-->>API: Tài khoản đã liên kết
+    else Có tài khoản cùng email (BR-08)
+      alt Google xác nhận email đã xác thực (BR-18)
+        API->>DB: INSERT oauth_accounts (liên kết vào tài khoản cũ)
+      else Email chưa xác thực
+        API-->>FE: 302 login.html?error="Email Google chưa được xác thực, hãy đăng nhập bằng mật khẩu"
+      end
+    else Chưa có tài khoản
+      API->>DB: INSERT users (không mật khẩu) + oauth_accounts
+    end
+    alt Tài khoản bị khóa
+      API-->>FE: 302 login.html?error="Tài khoản của bạn đã bị khóa"
+    else Tài khoản hoạt động
+      API->>DB: Cập nhật last_login_at
+      API->>API: Cấp JWT (id + token_version)
+      API-->>CB: 302 oauth-callback.html#35;token=JWT&notice=oauth hoặc need_email
+      CB->>CB: Lưu JWT (phần sau dấu #35; không gửi lên máy chủ)
+      CB-->>U: Chuyển tới /ban-do (hoặc hồ sơ nếu thiếu email)
+    end
+  else Người dùng từ chối
+    G-->>API: GET /api/auth/google/callback?error=access_denied
+    API-->>FE: 302 login.html?error="Đăng nhập Google chưa hoàn tất"
+    FE-->>U: Hiện thông báo
+  end
